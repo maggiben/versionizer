@@ -1,0 +1,30 @@
+{
+  "name": "@maggiben/versionizer",
+  "version": "1.0.0",
+  "description": "Enhace source files with doxygen headers",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test:lint && npm run test:typecheck && npm run test:spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/maggiben/versionizer.git"
+  },
+  "keywords": [
+    "source",
+    "files",
+    "doxygen",
+    "headers",
+    "document"
+  ],
+  "author": "Benjamin Maggi",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/maggiben/versionizer/issues"
+  },
+  "homepage": "https://github.com/maggiben/versionizer#readme",
+  "dependencies": {
+    "glob": "^7.1.2",
+    "nodegit": "^0.20.2"
+  }
+}

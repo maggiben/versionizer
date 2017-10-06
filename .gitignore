@@ -1,0 +1,35 @@
+# OSX
+.DS_Store
+
+# Dependency directory
+node_modules/
+
+# Logs
+*.log
+
+# flow type
+flow-typed/npm
+# Dont track webpack intermediate hot-update files
+dist/[0-9]*.*.js
+dist/[0-9]*.*.json
+
+# Dont track generated files
+dist/bundle.js
+dist/index.html
+
+# Keep these demo files in media folder
+!media/Library.xml
+!media/playlist.m3u
+!media/tray.png
+!media/FurElise.ogg
+!media/icon.png
+
+# Dont track anything else in the media folder
+media/
+
+# Linter cache
+.eslintcache
+coverage/
+.nyc_output/
+dist/vendor.bundle.js
+dist/window.js

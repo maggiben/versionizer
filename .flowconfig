@@ -1,0 +1,33 @@
+[ignore]
+<PROJECT_ROOT>/node_modules/.*
+<PROJECT_ROOT>/.git/.*
+<PROJECT_ROOT>/coverage/.*
+<PROJECT_ROOT>/media/.*
+<PROJECT_ROOT>/assets/.*
+<PROJECT_ROOT>/dist/.*
+
+[include]
+
+[libs]
+flow-typed/
+interfaces/
+
+[options]
+module.system=haste
+
+esproposal.class_static_fields=enable
+esproposal.class_instance_fields=enable
+esproposal.export_star_as=enable
+
+module.name_mapper='^[./a-zA-Z0-9$_-]+images$' -> 'ImageStub'
+module.name_mapper='^[./a-zA-Z0-9$_-]+\.\(css\|scss\|less\)$' -> 'StyleSheetStub'
+module.name_mapper='^[./a-zA-Z0-9$_-]+\.\(bmp\|gif\|jpg\|jpeg\|png\|psd\|svg\|webp\|m4v\|mov\|mp4\|mpeg\|mpg\|webm\|aac\|aiff\|caf\|m4a\|mp3\|wav\|html\|pdf|ttf|otf\)$' -> 'ImageStub'
+
+suppress_type=$FlowIssue
+suppress_type=$FlowFixMe
+suppress_type=$FixMe
+
+suppress_comment=\\(.\\|\n\\)*\\$FlowFixMe
+suppress_comment=\\(.\\|\n\\)*\\$FlowIssue
+
+unsafe.enable_getters_and_setters=true

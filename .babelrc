@@ -1,0 +1,37 @@
+{
+  "presets": [
+    ["env", {
+      "targets": { "electron": "1.7.8" },
+      "useBuiltIns": true
+    }],
+    "react",
+    "stage-0"
+  ],
+  "env": {
+    "test": {
+      "plugins": [ "istanbul" ]
+    },
+    "renderer": {
+      "plugins": [
+        "react-hot-loader/babel"
+      ]
+    },
+    "main": {
+    }
+  },
+  "sourceMaps": true,
+  "compact": false,
+  "plugins": [
+    "transform-decorators-legacy",
+    "transform-class-properties",
+    "transform-flow-strip-types",
+    [
+      "transform-runtime", {
+        "helpers": false,
+        "polyfill": false,
+        "regenerator": false
+      }
+    ]
+  ]
+}
+
