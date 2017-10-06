@@ -1,6 +1,6 @@
 {
   "name": "@maggiben/versionizer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Enhace source files with doxygen headers",
   "main": "index.js",
   "scripts": {
@@ -24,7 +24,9 @@
   },
   "homepage": "https://github.com/maggiben/versionizer#readme",
   "dependencies": {
+    "commander": "^2.11.0",
+    "documentation": "^5.3.2",
     "glob": "^7.1.2",
-    "nodegit": "^0.20.2"
+    "simple-git": "^1.79.0"
   }
 }
