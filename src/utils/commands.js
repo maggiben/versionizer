@@ -55,8 +55,7 @@ class MapEx extends Map  {
   static commands(file, repository) {
     return Object.entries({
       id: Math.random().toString(36).substr(2, 9).toUpperCase(),
-      // file() { return path.basename(file) },
-      // file() { /*return path.basename(file) */ },
+      file() { return file ? path.basename(file) : null },
       version() { /*return pkg.version */ },
       project() { /*return pkg.name */ },
       author() { /*return pkg.author.name || log.authorName */ },

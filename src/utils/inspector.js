@@ -1,8 +1,12 @@
 const path = require('path');
 const fs = require('fs');
 const { gitLog, gitStatus } = require('./git');
-const { MapEx2, MapEx, getCommandHandler, padEndLength, padEnd } = require('./commands');
+const { getCommandHandler, padEndLength, padEnd } = require('./commands');
+const { MapEx: CommandMap } = require('./MapEx');
+const { indexOfRegex, lastIndexOfRegex } = require('./String');
 
+
+// console.log('SuperString', Object.getOwnPropertyNames(String.prototype))
 process.on('unhandledRejection', (reason, p) => {
   console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
   // application specific logging, throwing an error, or other logic here
@@ -35,13 +39,20 @@ const buildFileHeader = async function (file, project) {
   const status = await gitStatus('/Users/bmaggi/tickler');
   const handlers = getCommandHandler(file, project, log);
   // const commands = new MapEx(file, project);
+  const commandMap = new CommandMap(file, project);
 
   const place = function (command, result = '') {
     const maxCommand = handlers[padEndLength];
+    const offset = commandMap.padEndLength;
     return `${command.padStart(command.length + 4, '// @').padEnd(maxCommand + 5).padEnd(maxCommand + 7, ': ')}` + `${result.padEnd(80 - (maxCommand + 10)).padEnd(80 - (maxCommand + 8), '//')}`
   }
 
   const execute = function (command, ...args) {
+    if (commandMap.has(command)) {
+      const result = commandMap.invoke(command, ...args);
+      // console.log('result', result);
+    }
+
     if (handlers.hasOwnProperty(command) && typeof(handlers[command]) === 'function') {
       const result = handlers[command].apply(this, ...args);
       return place(command, result);
@@ -61,11 +72,13 @@ const buildFileHeader = async function (file, project) {
     // test for command prefix and predicate
     if (comment.match(/^@.*:.*$/)) {
       // extract command name and predicate and convert to object
-      return comment
+      const expression = comment
         .replace(/(^@)(.*)(:)(.*)/, 'command:$2,predicate:$4')
         .split(',')
         .map(command => command.split(':'))
         .reduce((hash, [key, value]) => ({ ...hash, [key]:value }), {});
+      handlers[expression.command] = handlers[expression.command] || expression.predicate;
+      return expression;
     } else {
       // return untouched line as predicate with no command
       return { command: null, predicate: line };
@@ -84,30 +97,14 @@ const buildFileHeader = async function (file, project) {
         }
         if (copy) {
           const { command, predicate } = parseLine(line);
+          commandMap.parseLine(line);
           if (command) {
+            // handlers[command] = handlers[command] || predicate;
+            // console.log('handlers:', Object.keys(handlers))
             return { ...options, header: [ ...header, command ] };
           } else {
             return { ...options, header: [ ...header, predicate ] };
           }
-          // console.log('{ command, predicate }', JSON.stringify({ command, predicate },0,2))
-          /*
-          // extract and sanitize commands
-          const comment = line.replace(/\/(.\s+)(.*)(\s+\/.*)/, '$2').replace(/^\s+|\s+$/g, '');
-          // test for command prefix
-          if (comment.match(/^@.*:.*$/)) {
-            // extract command
-            const command = comment.replace(/(.*@)(.*\s)(:.*)/, '$2').replace(/^\s+|\s+$/g, '');
-            // extract default predicate
-            const predicate = comment.match(/^@.*:/).reduce((acc, b, i, o) => (o.input.split(':').pop().trim()), '');
-            // Short-circuit prop evaluation
-            handlers[command] = handlers[command] || predicate;
-            // return clean command
-            return { ...options, header: [ ...header, command ] };
-          } else {
-            // return the original untouched header line
-            return { ...options, header: [ ...header, line ] };
-          }
-          */
         }
       }
       return options;
@@ -116,7 +113,9 @@ const buildFileHeader = async function (file, project) {
     return {
       indexes,
       source: buildHeaderLessCopy(file, indexes),
-      header: wrapHeader(header.reduce((header, command) => [ ...header, ( command in handlers ? execute(command) : command )], []))
+      header: wrapHeader(header.reduce((header, command) => {
+        return [ ...header, ( command in handlers ? execute(command) : command )];
+      }, []))
     };
   };
 
@@ -125,7 +124,23 @@ const buildFileHeader = async function (file, project) {
   };
 
   const buildHeader = function (file) {
+    const headRegExp = new RegExp(/^[\/\/]{79,80}/gm);
+    const tailRegExp = new RegExp(/^[\/\/]{79,80}/gm);
+    const src = fs.readFileSync(file, 'utf8').toString();
+    // console.log(src.length);
+    // const first = src.regexIndexOf(new RegExp(/^[\/\/]{79,80}/gm));
+    // console.log('first', first);
+    // const last = src.regexIndexOf(new RegExp(/^[\/\/]{79,80}/gm), (first + );
+    // console.log('last', last);
+
+    const hx = src.extractWithin(headRegExp, tailRegExp);
+
+    console.log(hx, '\n-');
+
+
     const { indexes, source, header } = extractHeader(file);
+    // console.log('indexes', [first, last], indexes);
+    // console.log(src.substring(first, last + 80),'-')
     return insetHeader(source, header, Math.min.apply(null, indexes));
   };
 
