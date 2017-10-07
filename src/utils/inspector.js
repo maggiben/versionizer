@@ -1,7 +1,12 @@
 const path = require('path');
 const fs = require('fs');
 const { gitLog, gitStatus } = require('./git');
-const { getCommandHandler, padEndLength, padEnd } = require('./commands');
+const { MapEx2, MapEx, getCommandHandler, padEndLength, padEnd } = require('./commands');
+
+process.on('unhandledRejection', (reason, p) => {
+  console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
+  // application specific logging, throwing an error, or other logic here
+});
 
 /* Private Methods */
 const glob = function (pattern, options) {
@@ -29,6 +34,7 @@ const buildFileHeader = async function (file, project) {
   const log = await gitLog('/Users/bmaggi/tickler', { file });
   const status = await gitStatus('/Users/bmaggi/tickler');
   const handlers = getCommandHandler(file, project, log);
+  // const commands = new MapEx(file, project);
 
   const place = function (command, result = '') {
     const maxCommand = handlers[padEndLength];
@@ -49,6 +55,23 @@ const buildFileHeader = async function (file, project) {
     return [ head, ...array, tail ];
   };
 
+  const parseLine = function (line) {
+    // unwrap comment and remove all spaces
+    const comment = line.replace(/[/\/(.\s+)]/g,'');
+    // test for command prefix and predicate
+    if (comment.match(/^@.*:.*$/)) {
+      // extract command name and predicate and convert to object
+      return comment
+        .replace(/(^@)(.*)(:)(.*)/, 'command:$2,predicate:$4')
+        .split(',')
+        .map(command => command.split(':'))
+        .reduce((hash, [key, value]) => ({ ...hash, [key]:value }), {});
+    } else {
+      // return untouched line as predicate with no command
+      return { command: null, predicate: line };
+    }
+  };
+
   const extractHeader = function (file) {
     const { indexes, header } = fs.readFileSync(file, 'utf8')
     .toString()
@@ -60,6 +83,14 @@ const buildFileHeader = async function (file, project) {
           return { ...options, copy: !copy, indexes: [ ...indexes, index ] };
         }
         if (copy) {
+          const { command, predicate } = parseLine(line);
+          if (command) {
+            return { ...options, header: [ ...header, command ] };
+          } else {
+            return { ...options, header: [ ...header, predicate ] };
+          }
+          // console.log('{ command, predicate }', JSON.stringify({ command, predicate },0,2))
+          /*
           // extract and sanitize commands
           const comment = line.replace(/\/(.\s+)(.*)(\s+\/.*)/, '$2').replace(/^\s+|\s+$/g, '');
           // test for command prefix
@@ -76,6 +107,7 @@ const buildFileHeader = async function (file, project) {
             // return the original untouched header line
             return { ...options, header: [ ...header, line ] };
           }
+          */
         }
       }
       return options;
@@ -83,59 +115,25 @@ const buildFileHeader = async function (file, project) {
 
     return {
       indexes,
+      source: buildHeaderLessCopy(file, indexes),
       header: wrapHeader(header.reduce((header, command) => [ ...header, ( command in handlers ? execute(command) : command )], []))
     };
   };
 
   const insetHeader = function (source, header, index) {
     return source.slice(0, index).concat(header, source.slice(index));
-  }
-  const buildHeader = function (file) {
-    // const { indexes, headers } = fs.readFileSync(file, 'utf8')
-    // .toString()
-    // .split(/\r?\n/)
-    // .reduce(function (options, line, index) {
-    //   const { copy, indexes, headers } = options;
-    //   if (line.match(/^\/\*?\*\/|\/\/.*$/g) && indexes.length < 3) {
-    //     if (line.match(/^[\/\/]{79,80}/)) {
-    //       return { ...options, copy: !copy, indexes: [ ...indexes, index ] };
-    //     }
-    //     if (copy) {
-    //       // extract and sanitize commands
-    //       const comment = line.replace(/\/(.\s+)(.*)(\s+\/.*)/, '$2').replace(/^\s+|\s+$/g, '');
-    //       // test for command prefix
-    //       if (comment.match(/^@.*:.*$/)) {
-    //         // extract command
-    //         const command = comment.replace(/(.*@)(.*\s)(:.*)/, '$2').replace(/^\s+|\s+$/g, '');
-    //         // extract default predicate
-    //         const predicate = comment.match(/^@.*:/).reduce((acc, b, i, o) => (o.input.split(':').pop().trim()), '');
-    //         // Short-circuit prop evaluation
-    //         handlers[command] = handlers[command] || predicate;
-    //         // return clean command
-    //         return { ...options, headers: [ ...headers, command ] };
-    //       } else {
-    //         // return the original untouched header line
-    //         return { ...options, headers: [ ...headers, line ] };
-    //       }
-    //     }
-    //   }
-    //   return options;
-    // }, { copy: false, indexes: [], headers: [] });
+  };
 
-    // const header = wrapHeader(headers.reduce((headers, command) => [ ...headers, ( command in handlers ? execute(command) : command )], []));
-    const { indexes, header } = extractHeader(file);
-    const source = buildHeaderLessCopy(file, indexes);
-    // const src = source.slice(0, Math.min.apply(null, indexes)).concat(header, source.slice(Math.min.apply(null, indexes)));
-    const src = insetHeader(source, header, Math.min.apply(null, indexes));
-    console.log(src.join('\n'));
+  const buildHeader = function (file) {
+    const { indexes, source, header } = extractHeader(file);
+    return insetHeader(source, header, Math.min.apply(null, indexes));
   };
 
   if (fs.existsSync(file)) {
     const stats = fs.statSync(file);
     if (stats.isFile()) {
       try {
-        const headers = buildHeader(file);
-        return headers;
+        return buildHeader(file);
       } catch (error) {
         throw error;
       }
