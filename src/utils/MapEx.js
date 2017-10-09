@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { formatDate } = require('./helpers');
+const { indexOfRegex, lastIndexOfRegex } = require('./String');
 
 /* Private variables */
 const MapProxy = new Proxy(Map, {
@@ -41,7 +42,7 @@ class MapEx extends MapProxy {
 
   static isValid(command, predicate) {
     const ascii = new RegExp(/^[\x00-\x7F]*$/);
-    return ascii.test(command);
+    return (command && command.length) ? ascii.test(command) : false;
   };
 
   constructor(file, repository) {
@@ -66,7 +67,6 @@ class MapEx extends MapProxy {
 
   set(command, predicate) {
     if (MapEx.isValid(command)) {
-      // console.log('super.set', command);
       return super.set(command, predicate);
     }
   }
@@ -96,12 +96,13 @@ class MapEx extends MapProxy {
 
   parseLine(string) {
     // unwrap expression from comment and remove all spaces
-    string = string.replace(/[/\/(.\s+)]/g,'');
+    // string = string.replace(/[/\/(.\s+)]/g,'');
     // test for a command prefix and expression
-    if (string.match(/^@.*:.*$/)) {
+    if (string.unwrap().match(/^@.*:.*$/)) {
       // extract command name and predicate
       // from expression then convert to map
       const expression = string
+        .unwrap()
         .replace(/(^@)(.*)(:)(.*)/, 'command:$2,predicate:$4')
         .split(',')
         .map(command => command.split(':'))

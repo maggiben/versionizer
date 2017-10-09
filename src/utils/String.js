@@ -1,10 +1,17 @@
 
 /* Private Methods */
 const toRegExp = function(regexp) {
-  return (regexp instanceof RegExp) ? new RegExp(regexp) : new RegExp(regexp);
+  return (regexp instanceof RegExp) ? regexp : new RegExp(regexp);
 };
 
 const helpers = {
+  unwrap: {
+    value(regexp = new RegExp(/[/\/(.\s+)]/g), substr = '') {
+      return this.replace(regexp, substr);
+    },
+    enumerable: false,
+    writable: false
+  },
   regexIndexOf: {
     value(regex, startpos) {
       let indexOf = this.substring(startpos || 0).search(regex);
@@ -13,17 +20,24 @@ const helpers = {
     enumerable: false,
     writable: false
   },
-  regexIndexes: {
-    value(regex, startpos = (startpos < 0 ? 0 : startpos || this.length)) {
-      regex = (regex instanceof RegExp) ? regex : new RegExp(regex);
-      const stringToWorkWith = this.substring(0, startpos + 1);
-      let lastIndexOf = -1;
-      let nextStop = 0;
-      while ((result = regex.exec(stringToWorkWith)) != null) {
-        lastIndexOf = result.index;
-        regex.lastIndex = ++nextStop;
-      }
-      return lastIndexOf;
+  rangeWithin: {
+    value(headRegExp, tailRegExp, startpos = ((arguments.length > 2 && (arguments[2] < 0)) ? 0 : arguments[2] || this.length)) {
+
+      headRegExp = toRegExp(headRegExp);
+      tailRegExp = toRegExp(tailRegExp);
+
+      const findIndex = (regExp, string) => ((function(...args) {
+        const [ match ] = args;
+        const { index = 0, input = '' } = match || {};
+        const { lastIndex } = regExp;
+        // console.log('lastIndex: %s, index: %s, match: %s', lastIndex, index, match);
+        return { lastIndex, index, match };
+      }( regExp.exec(string) )));
+
+      const head = findIndex(headRegExp, this.substring(0, (startpos + 1)));
+      const tail = findIndex(tailRegExp, this.substring(head.lastIndex, (startpos + 1)));
+      return [ head.index, (tail.lastIndex + head.lastIndex) ];
+
     },
     enumerable: false,
     writable: false
@@ -32,38 +46,8 @@ const helpers = {
     value(headRegExp, tailRegExp, startpos = ((arguments.length > 2 && (arguments[2] < 0)) ? 0 : arguments[2] || this.length)) {
       headRegExp = toRegExp(headRegExp);
       tailRegExp = toRegExp(tailRegExp);
-
-      const findIndex = (regExp, string) => ((function(...args) {
-        const [ match ] = args;
-        const { index = 0, input = '' } = match || {};
-        const { lastIndex } = regExp;
-        console.log('lastIndex: %s, index: %s, match: %s', lastIndex, index, match);
-        return { lastIndex, index, match };
-      }( regExp.exec(string) )));
-
-      const headIndex = findIndex(headRegExp, this.substring(0, (startpos + 1)));
-      const tailIndex = findIndex(tailRegExp, this.substring(headIndex.lastIndex, (startpos + 1)));
-
-      return this.substring(headIndex.index, tailIndex.lastIndex + headIndex.lastIndex);
-
-      // const headIndex = (function(...args) {
-      //   const [ match ] = args;
-      //   const { index = 0, input = '' } = match || {};
-      //   const { lastIndex } = headRegExp;
-      //   console.log('headRegExp', lastIndex, index);
-      //   return Object.assign({}, { input, index, lastIndex });
-      // })( headRegExp.exec(this.substring(0, (startpos + 1))) );
-
-
-      // const tailIndex = (function(...args) {
-      //   const [ match ] = args;
-      //   const { index = 0, input = '' } = match || {};
-      //   const { lastIndex } = tailRegExp;
-      //   console.log('tailRegExp', lastIndex, index);
-      //   return Object.assign({}, { input, index, lastIndex });
-      // })( tailRegExp.exec(this.substring(headIndex.lastIndex, (startpos + 1))));
-
-      // console.log('headIndex: ', headIndex.lastIndex, 'tailIndex: ', tailIndex.lastIndex)
+      const [ head, tail ] = this.rangeWithin(headRegExp, tailRegExp);
+      return this.substring(head, tail);
     },
     enumerable: false,
     writable: false

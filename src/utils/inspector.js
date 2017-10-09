@@ -6,7 +6,6 @@ const { MapEx: CommandMap } = require('./MapEx');
 const { indexOfRegex, lastIndexOfRegex } = require('./String');
 
 
-// console.log('SuperString', Object.getOwnPropertyNames(String.prototype))
 process.on('unhandledRejection', (reason, p) => {
   console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
   // application specific logging, throwing an error, or other logic here
@@ -37,28 +36,25 @@ const buildFileHeader = async function (file, project) {
 
   const log = await gitLog('/Users/bmaggi/tickler', { file });
   const status = await gitStatus('/Users/bmaggi/tickler');
-  const handlers = getCommandHandler(file, project, log);
-  // const commands = new MapEx(file, project);
   const commandMap = new CommandMap(file, project);
 
   const place = function (command, result = '') {
-    const maxCommand = handlers[padEndLength];
     const offset = commandMap.padEndLength;
-    return `${command.padStart(command.length + 4, '// @').padEnd(maxCommand + 5).padEnd(maxCommand + 7, ': ')}` + `${result.padEnd(80 - (maxCommand + 10)).padEnd(80 - (maxCommand + 8), '//')}`
-  }
+    const name = command
+      .padStart(command.length + 4, '// @')
+      .padEnd(offset + 5)
+      .padEnd(offset + 7, ': ');
+
+    const value = result
+      .padEnd(80 - (offset + 10))
+      .padEnd(80 - (offset + 8), '//');
+
+    return `${name + value}`;
+  };
 
   const execute = function (command, ...args) {
-    if (commandMap.has(command)) {
-      const result = commandMap.invoke(command, ...args);
-      // console.log('result', result);
-    }
-
-    if (handlers.hasOwnProperty(command) && typeof(handlers[command]) === 'function') {
-      const result = handlers[command].apply(this, ...args);
-      return place(command, result);
-    } else {
-      return place(command, handlers[command] || '');
-    }
+    const result = commandMap.invoke(command, ...args);
+    return place(command, result || '');
   }
 
   const wrapHeader = function (array) {
@@ -66,55 +62,73 @@ const buildFileHeader = async function (file, project) {
     return [ head, ...array, tail ];
   };
 
-  const parseLine = function (line) {
-    // unwrap comment and remove all spaces
-    const comment = line.replace(/[/\/(.\s+)]/g,'');
-    // test for command prefix and predicate
-    if (comment.match(/^@.*:.*$/)) {
-      // extract command name and predicate and convert to object
-      const expression = comment
-        .replace(/(^@)(.*)(:)(.*)/, 'command:$2,predicate:$4')
-        .split(',')
-        .map(command => command.split(':'))
-        .reduce((hash, [key, value]) => ({ ...hash, [key]:value }), {});
-      handlers[expression.command] = handlers[expression.command] || expression.predicate;
-      return expression;
-    } else {
-      // return untouched line as predicate with no command
-      return { command: null, predicate: line };
-    }
-  };
-
   const extractHeader = function (file) {
-    const { indexes, header } = fs.readFileSync(file, 'utf8')
-    .toString()
-    .split(/\r?\n/)
-    .reduce(function (options, line, index) {
-      const { copy, indexes, header } = options;
-      if (line.match(/^\/\*?\*\/|\/\/.*$/g) && indexes.length < 3) {
-        if (line.match(/^[\/\/]{79,80}/)) {
-          return { ...options, copy: !copy, indexes: [ ...indexes, index ] };
-        }
-        if (copy) {
-          const { command, predicate } = parseLine(line);
-          commandMap.parseLine(line);
-          if (command) {
-            // handlers[command] = handlers[command] || predicate;
-            // console.log('handlers:', Object.keys(handlers))
-            return { ...options, header: [ ...header, command ] };
-          } else {
-            return { ...options, header: [ ...header, predicate ] };
-          }
-        }
-      }
-      return options;
-    }, { copy: false, indexes: [], header: [] });
+    const headRegExp = new RegExp(/^[\/\/]{79,80}/gm);
+    const tailRegExp = new RegExp(/^[\/\/]{79,80}/gm);
+    const source = fs.readFileSync(file, 'utf8');
+
+    const indexes = source
+      .toString()
+      .rangeWithin(/^[\/\/]{79,80}/gm, /^[\/\/]{79,80}/gm)
+      .map((index, i, arr) => {
+        const min = Math.min(...arr);
+        const max = Math.max(...arr);
+        return source.substring(i, index).split(/\r?\n/).length - 1
+      });
+
+    const header = source
+      .toString()
+      .extractWithin(/^[\/\/]{79,80}/gm, /^[\/\/]{79,80}/gm)
+      .split(/\r?\n/);
+
+    const body = source
+      .toString()
+      .substring(header.length, source.length);
+
+    console.log('indexes: %s', path.basename(file), indexes)
+    console.log(header);
+    // console.log(body);
+
+    // fs.readFileSync(file, 'utf8')
+    //   .toString()
+    //   .split(/\r?\n/)
+    //   .reduce(function (options, line, index) {
+    //     const { copy, indexes, header } = options;
+    //     if (line.match(/^\/\*?\*\/|\/\/.*$/g) && indexes.length < 3) {
+    //       if (line.match(/^[\/\/]{79,80}/)) {
+    //         console.log('INDEX', index)
+    //       }
+    //     }
+    //     return options;
+    //   }, { copy: false, indexes: [], header: [] })
+
+    // const { indexes, header } = fs.readFileSync(file, 'utf8')
+    //   .toString()
+    //   .split(/\r?\n/)
+    //   .reduce(function (options, line, index) {
+    //     const { copy, indexes, header } = options;
+    //     if (line.match(/^\/\*?\*\/|\/\/.*$/g) && indexes.length < 3) {
+    //       if (line.match(/^[\/\/]{79,80}/)) {
+    //         return { ...options, copy: !copy, indexes: [ ...indexes, index ] };
+    //       }
+    //       if (copy) {
+    //         const { command, predicate } = commandMap.parseLine(line);
+    //         if (command) {
+    //           return { ...options, header: [ ...header, command ] };
+    //         } else {
+    //           return { ...options, header: [ ...header, predicate ] };
+    //         }
+    //       }
+    //     }
+    //     return options;
+    //   }, { copy: false, indexes: [], header: [] });
 
     return {
       indexes,
-      source: buildHeaderLessCopy(file, indexes),
+      // source: buildHeaderLessCopy(file, indexes),
+      // source: body,
       header: wrapHeader(header.reduce((header, command) => {
-        return [ ...header, ( command in handlers ? execute(command) : command )];
+        return [ ...header, ( commandMap.has(command) ? execute(command) : command )];
       }, []))
     };
   };
@@ -124,23 +138,13 @@ const buildFileHeader = async function (file, project) {
   };
 
   const buildHeader = function (file) {
-    const headRegExp = new RegExp(/^[\/\/]{79,80}/gm);
-    const tailRegExp = new RegExp(/^[\/\/]{79,80}/gm);
-    const src = fs.readFileSync(file, 'utf8').toString();
-    // console.log(src.length);
-    // const first = src.regexIndexOf(new RegExp(/^[\/\/]{79,80}/gm));
-    // console.log('first', first);
-    // const last = src.regexIndexOf(new RegExp(/^[\/\/]{79,80}/gm), (first + );
-    // console.log('last', last);
-
-    const hx = src.extractWithin(headRegExp, tailRegExp);
-
-    console.log(hx, '\n-');
-
+    // const headRegExp = new RegExp(/^[\/\/]{79,80}/gm);
+    // const tailRegExp = new RegExp(/^[\/\/]{79,80}/gm);
+    // const src = fs.readFileSync(file, 'utf8').toString();
+    // const hx = src.extractWithin(headRegExp, tailRegExp);
+    // console.log(hx, '\n-');
 
     const { indexes, source, header } = extractHeader(file);
-    // console.log('indexes', [first, last], indexes);
-    // console.log(src.substring(first, last + 80),'-')
     return insetHeader(source, header, Math.min.apply(null, indexes));
   };
 
