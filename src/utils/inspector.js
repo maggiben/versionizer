@@ -79,58 +79,30 @@ const buildFileHeader = async function (file, project) {
     const header = source
       .toString()
       .extractWithin(/^[\/\/]{79,80}/gm, /^[\/\/]{79,80}/gm)
+      // .substring(indexes[0], indexes[1])
       .split(/\r?\n/);
 
     const body = source
       .toString()
-      .substring(header.length, source.length);
+      .substring(indexes[1] || 0, source.length);
 
-    console.log('indexes: %s', path.basename(file), indexes)
-    console.log(header);
+    // console.log('indexes: %s', path.basename(file), indexes)
+    // console.log(header);
     // console.log(body);
 
-    // fs.readFileSync(file, 'utf8')
-    //   .toString()
-    //   .split(/\r?\n/)
-    //   .reduce(function (options, line, index) {
-    //     const { copy, indexes, header } = options;
-    //     if (line.match(/^\/\*?\*\/|\/\/.*$/g) && indexes.length < 3) {
-    //       if (line.match(/^[\/\/]{79,80}/)) {
-    //         console.log('INDEX', index)
-    //       }
-    //     }
-    //     return options;
-    //   }, { copy: false, indexes: [], header: [] })
-
-    // const { indexes, header } = fs.readFileSync(file, 'utf8')
-    //   .toString()
-    //   .split(/\r?\n/)
-    //   .reduce(function (options, line, index) {
-    //     const { copy, indexes, header } = options;
-    //     if (line.match(/^\/\*?\*\/|\/\/.*$/g) && indexes.length < 3) {
-    //       if (line.match(/^[\/\/]{79,80}/)) {
-    //         return { ...options, copy: !copy, indexes: [ ...indexes, index ] };
-    //       }
-    //       if (copy) {
-    //         const { command, predicate } = commandMap.parseLine(line);
-    //         if (command) {
-    //           return { ...options, header: [ ...header, command ] };
-    //         } else {
-    //           return { ...options, header: [ ...header, predicate ] };
-    //         }
-    //       }
-    //     }
-    //     return options;
-    //   }, { copy: false, indexes: [], header: [] });
-
+    /*
     return {
       indexes,
       // source: buildHeaderLessCopy(file, indexes),
       // source: body,
+      body,
       header: wrapHeader(header.reduce((header, command) => {
         return [ ...header, ( commandMap.has(command) ? execute(command) : command )];
       }, []))
     };
+    */
+
+    return { indexes, header, body, source };
   };
 
   const insetHeader = function (source, header, index) {
@@ -144,8 +116,12 @@ const buildFileHeader = async function (file, project) {
     // const hx = src.extractWithin(headRegExp, tailRegExp);
     // console.log(hx, '\n-');
 
-    const { indexes, source, header } = extractHeader(file);
-    return insetHeader(source, header, Math.min.apply(null, indexes));
+    // const { indexes, source, header } = extractHeader(file);
+    // return insetHeader(source, header, Math.min.apply(null, indexes));
+    const { indexes, header, body, source } = extractHeader(file);
+    console.log(indexes, '\n')
+    console.log(header, '\n')
+    console.log(body,  '\n')
   };
 
   if (fs.existsSync(file)) {
