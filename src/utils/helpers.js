@@ -47,3 +47,19 @@ module.exports = {
   getPackage,
   formatDate
 };
+
+
+/* reges */
+
+/*
+'// @fax     :pepepepe //'.replace(/\/(.\s+)(.*)(\s+\/.*)/, '$2').replace(/[(^@) ]/g,'');
+'// f@fax     :pepepepe //'.replace(/\/(.\s+)(.*)(\s+\/.*)/, '$2').replace(/(^@)[ ]/g,'');
+'// @ff@popop    : dgsdfgsdfg    /////'.replace(/[(^@) ]|(:)|[/\/(.\s+)]/g,'$1')
+'// @ff@popop    : dgsdfgsdfg    /////'.replace(/[(^@) ]|[/\/(.\s+)]/g,'')
+a.replace(/\/(.\s+)(.*)(\s+\/.*)/, '$2').replace(/\s{1,}/g,'').replace(/(.*@)(.*)(:)(.*)/, 'command:$2,predicate:$4').split(',').map(e => (e.split(':'))).reduce((hash, [key, value])=>({...hash, [key]:value}),{})
+
+
+
+'// @ff@popop    : dgsdfgsdfg    /////'.replace(/[/\/(.\s+)]|(@)/g,'$1')
+
+*/
